@@ -1,59 +1,422 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# PHP_Laravel12_WebHook_Client
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+## Project Description
 
-## About Laravel
+PHP_Laravel12_WebHook_Client is a Laravel 12 project designed to act as a Webhook Client. It can receive HTTP POST requests from external services, store the payload in the database, and log the data for processing.
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Key Features
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+- Receive webhooks via /webhook-client route.
 
-## Learning Laravel
+- Save webhook calls in webhook_calls table using Spatie Laravel Webhook Client.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+- Process webhook payload via ProcessWebhookJob.
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- Logs payloads to laravel.log and optional separate log file.
 
-## Laravel Sponsors
+- CSRF protection disabled for webhook route.
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+- Easy to test using Postman or any HTTP client.
 
-### Premium Partners
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Technologies Used
 
-## Contributing
+- PHP 8.x – Backend programming language
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+- Laravel 12 – Web framework for routing, jobs, and database
 
-## Code of Conduct
+- MySQL – Database to store webhook calls
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+- Spatie Webhook Client – Handles webhook requests and saves to DB
 
-## Security Vulnerabilities
+- Composer – Dependency management
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+- Postman – Tool to test webhook POST requests
 
-## License
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+
+
+---
+
+
+
+## Installation Steps
+
+
+---
+
+
+## STEP 1: Create Laravel 12 Project
+
+### Open terminal / CMD and run:
+
+```
+composer create-project laravel/laravel PHP_Laravel12_WebHook_Client "12.*"
+
+```
+
+### Go inside project:
+
+```
+cd PHP_Laravel12_WebHook_Client
+
+```
+
+#### Explanation:
+
+Installs Laravel 12 and creates a project folder with all required files. 
+
+The cd command navigates into the project directory.
+
+
+
+## STEP 2: Database Setup (Optional)
+
+### Open .env and set:
+
+```
+APP_NAME=Laravel
+APP_ENV=local
+APP_KEY=base64:E5lu/Xb+LnzcefXtbiVevK5jCo7WBlLhfpSATHyN9Rk=
+APP_DEBUG=true
+APP_URL=http://localhost
+
+DB_CONNECTION=mysql
+DB_HOST=127.0.0.1
+DB_PORT=3306
+DB_DATABASE=laravel12_webhook_client
+DB_USERNAME=root
+DB_PASSWORD=
+
+QUEUE_CONNECTION=sync
+SESSION_DRIVER=file
+
+WEBHOOK_CLIENT_SECRET=screte-key
+
+
+```
+
+### Create database in MySQL / phpMyAdmin:
+
+```
+Database name: laravel12_webhook_client
+
+```
+
+#### Explanation:
+
+Connects the Laravel app to MySQL so it can save and retrieve webhook call data.
+
+
+
+## STEP 3: Install Spatie Webhook Client
+
+### Run:
+
+```
+composer require spatie/laravel-webhook-client
+
+php artisan vendor:publish --provider="Spatie\WebhookClient\WebhookClientServiceProvider" --tag="config"
+
+php artisan vendor:publish --provider="Spatie\WebhookClient\WebhookClientServiceProvider" --tag="migrations"
+
+php artisan migrate
+
+```
+
+
+#### Explanation:
+
+Installs the Spatie package, publishes config & migrations, and creates the database table for webhook calls.
+
+
+
+
+## STEP 4: Update config/webhook-client.php
+
+### config/webhook-client.php:
+
+
+```
+<?php
+
+return [
+    'configs' => [
+        [
+            'name' => 'default',
+
+            // TEMPORARY: Accept all requests to avoid 500 error
+            'signature_validator' => \Spatie\WebhookClient\SignatureValidator\AllowAllSignatureValidator::class,
+            'signature_header_name' => 'Signature',
+            'webhook_profile' => \Spatie\WebhookClient\WebhookProfile\ProcessEverythingWebhookProfile::class,
+            'webhook_response' => \Spatie\WebhookClient\WebhookResponse\DefaultRespondsTo::class,
+            'webhook_model' => \Spatie\WebhookClient\Models\WebhookCall::class,
+            'process_webhook_job' => \App\Jobs\ProcessWebhookJob::class,
+            'store_headers' => [],
+        ],
+    ],
+];
+
+```
+
+
+#### Explanation:
+
+Configures the webhook client, specifying how requests are validated, saved, and processed by a job.
+
+
+
+
+## STEP 5: Create the Job
+
+### Run:
+
+```
+php artisan make:job ProcessWebhookJob
+
+```
+
+### app/Jobs/ProcessWebhookJob.php:
+
+```
+<?php
+
+namespace App\Jobs;
+
+use Spatie\WebhookClient\Models\WebhookCall;
+
+class ProcessWebhookJob
+{
+    public WebhookCall $webhookCall;
+
+    public function __construct(WebhookCall $webhookCall)
+    {
+        $this->webhookCall = $webhookCall;
+    }
+
+    public function handle(): void
+    {
+        // Log payload immediately
+        $payload = $this->webhookCall->payload;
+
+        \Log::info('Webhook received:', $payload);
+
+        // Optional: Save to separate file for debugging
+        file_put_contents(storage_path('logs/webhook.log'), json_encode($payload) . PHP_EOL, FILE_APPEND);
+    }
+}
+
+```
+
+
+#### Explanation:
+
+Handles processing of incoming webhook payloads and logs them safely for debugging or further processing.
+
+
+
+
+
+## STEP 6: Disable CSRF for webhook route
+
+### Run:
+
+```
+php artisan make:middleware VerifyCsrfToken
+
+```
+
+
+### app/Http/Middleware/VerifyCsrfToken.php
+
+```
+<?php
+
+namespace App\Http\Middleware;
+
+use Illuminate\Foundation\Http\Middleware\VerifyCsrfToken as Middleware;
+
+class VerifyCsrfToken extends Middleware
+{
+    protected $except = [
+        'webhook-client', // disable CSRF for webhook
+    ];
+}
+
+```
+
+
+#### Explanation:
+
+Prevents CSRF protection from blocking webhook POST requests to /webhook-client.
+
+
+
+
+## STEP 7: Create the route
+
+### routes/web.php:
+
+```
+<?php
+
+use Illuminate\Support\Facades\Route;
+use App\Http\Controllers\WebhookTestController;
+
+Route::webhooks('webhook-client');
+
+Route::post('webhook-client', [WebhookTestController::class, 'receive']);
+
+```
+
+
+#### Explanation:
+
+Defines the route for webhook calls; Spatie automatically saves calls to the database.
+
+
+
+
+
+## STEP 8: Create Webhook Controller
+
+### Run:
+
+```
+php artisan make:controller WebhookTestController
+
+```
+
+### app/Http/Controllers/WebhookTestController.php:
+
+```
+<?php
+
+namespace App\Http\Controllers;
+
+use Illuminate\Http\Request;
+
+class WebhookTestController extends Controller
+{
+    public function receive(Request $request)
+    {
+        // Log payload immediately
+        \Log::info('Webhook received:', $request->all());
+
+        // Optional: separate log file
+        file_put_contents(storage_path('logs/webhook_debug.log'), json_encode($request->all()) . PHP_EOL, FILE_APPEND);
+
+        return response()->json(['status' => 'success']);
+    }
+}
+
+```
+
+
+#### Explanation:
+
+Optional controller to test logging of webhook payloads without relying on Spatie.
+
+
+
+
+
+## STEP 9: Test in Postman
+
+
+1. Method: POST
+
+2. URL: http://127.0.0.1:8000/webhook-client
+
+3. Headers: 
+
+```
+Content-Type: application/json
+
+```
+
+4. Body (raw JSON):
+
+```
+{
+  "event": "order.created",
+  "order_id": 123,
+  "amount": 500
+}
+
+```
+
+5. Send request → response:
+
+```
+{"status":"success"}
+
+```
+
+
+#### Explanation:
+
+Tests webhook endpoint; payload should now be saved to the database and logged.
+
+
+
+
+
+## So you can see this type Output:
+
+
+<img width="1447" height="905" alt="Screenshot 2026-02-20 103707" src="https://github.com/user-attachments/assets/0ce5175f-96ee-46b5-8ae5-6beac6a24ef5" />
+
+
+
+
+---
+
+# Project FOLDER Structure:
+
+```
+
+PHP_Laravel12_WebHook_Client/
+├── app/
+│   ├── Console/
+│   ├── Exceptions/
+│   ├── Http/
+│   │   ├── Controllers/
+│   │   │   └── WebhookTestController.php
+│   │   ├── Middleware/
+│   │   │   └── VerifyCsrfToken.php
+│   │   └── Kernel.php
+│   ├── Jobs/
+│   │   └── ProcessWebhookJob.php
+│   ├── Models/
+│   └── Providers/
+├── bootstrap/
+│   └── app.php
+├── config/
+│   ├── app.php
+│   └── webhook-client.php
+├── database/
+│   ├── factories/
+│   ├── migrations/
+│   │   └── create_webhook_calls_table.php
+│   └── seeders/
+├── public/
+│   └── index.php
+├── resources/
+│   ├── views/
+│   └── js/ 
+├── routes/
+│   └── web.php
+├── storage/
+│   └── logs/
+│       ├── laravel.log
+│       └── webhook.log
+├── tests/
+├── vendor/
+├── artisan
+├── composer.json
+├── composer.lock
+└── .env
+
+```
