@@ -1,5 +1,4 @@
 <?php
-// app/Models/WebhookCall.php
 
 namespace App\Models;
 
@@ -12,7 +11,8 @@ class WebhookCall extends Model
     
     protected $fillable = [
         'name', 'url', 'headers', 'payload', 'exception',
-        'status', 'retry_count', 'processed_at', 'response_code', 'response_body'
+        'status', 'retry_count', 'processed_at', 'response_code', 'response_body',
+        'execution_time', 'memory_usage'
     ];
     
     protected $casts = [
@@ -27,21 +27,24 @@ class WebhookCall extends Model
         return $this->hasMany(WebhookFailure::class, 'webhook_call_id');
     }
     
-    public function markAsProcessed($responseCode = null, $responseBody = null)
+    public function markAsProcessed($responseCode = null, $responseBody = null, $executionTime = null, $memoryUsage = null)
     {
         $this->update([
             'status' => 'processed',
             'processed_at' => now(),
             'response_code' => $responseCode,
             'response_body' => $responseBody,
+            'execution_time' => $executionTime,
+            'memory_usage' => $memoryUsage,
         ]);
     }
     
-    public function markAsFailed($exception = null)
+    public function markAsFailed($exception = null, $executionTime = null)
     {
         $this->update([
             'status' => 'failed',
             'exception' => $exception,
+            'execution_time' => $executionTime,
         ]);
     }
     

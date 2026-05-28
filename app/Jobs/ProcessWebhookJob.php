@@ -1,5 +1,4 @@
 <?php
-// app/Jobs/ProcessWebhookJob.php
 
 namespace App\Jobs;
 
@@ -17,7 +16,7 @@ class ProcessWebhookJob implements ShouldQueue
     
     public WebhookCall $webhookCall;
     public $tries = 3;
-    public $backoff = [60, 300, 900]; // 1 minute, 5 minutes, 15 minutes
+    public $backoff =;
     
     public function __construct(WebhookCall $webhookCall)
     {
@@ -26,37 +25,30 @@ class ProcessWebhookJob implements ShouldQueue
     
     public function handle(): void
     {
+        $startTime = microtime(true);
+        $startMemory = memory_get_usage();
+
         try {
             $payload = $this->webhookCall->payload;
-            
-            // Process different webhook types
             $eventType = $payload['event'] ?? 'unknown';
             
-            Log::info('Processing webhook:', [
-                'id' => $this->webhookCall->id,
-                'event' => $eventType,
-                'payload' => $payload
-            ]);
-            
-            // Handle specific webhook events
             $this->handleWebhookEvent($eventType, $payload);
             
-            // Mark as processed
-            $this->webhookCall->markAsProcessed(200, ['status' => 'success']);
-            
-            // Store in separate log file
+            $executionTime = round(microtime(true) - $startTime, 4) . 's';
+            $memoryUsage = round((memory_get_usage() - $startMemory) / 1024, 2) . ' KB';
+
+            $this->webhookCall->update([
+                'status' => 'success',
+                'execution_time' => $executionTime,
+                'memory_usage' => $memoryUsage
+            ]);
+
             $this->logToFile($payload);
-            
-            // Trigger real-time event
             event(new \App\Events\WebhookReceived($this->webhookCall));
             
         } catch (\Exception $e) {
-            Log::error('Webhook processing failed:', [
-                'id' => $this->webhookCall->id,
-                'error' => $e->getMessage()
-            ]);
+            $executionTime = round(microtime(true) - $startTime, 4) . 's';
             
-            // Record failure
             WebhookFailure::create([
                 'webhook_call_id' => $this->webhookCall->id,
                 'error_message' => $e->getMessage(),
@@ -67,9 +59,8 @@ class ProcessWebhookJob implements ShouldQueue
                 ]
             ]);
             
-            $this->webhookCall->markAsFailed($e->getMessage());
+            $this->webhookCall->update(['status' => 'failed', 'execution_time' => $executionTime]);
             
-            // Re-throw for retry
             throw $e;
         }
     }
@@ -86,27 +77,19 @@ class ProcessWebhookJob implements ShouldQueue
             case 'payment.received':
                 $this->handlePaymentReceived($payload);
                 break;
-            default:
-                Log::info("No specific handler for event: {$eventType}");
         }
     }
     
     protected function handleOrderCreated($payload)
     {
-        // Custom logic for new orders
-        Log::info("New order created: Order #{$payload['order_id']} - Amount: {$payload['amount']}");
-        
-        // You can add email notifications, database updates, etc.
     }
     
     protected function handleOrderUpdated($payload)
     {
-        Log::info("Order updated: Order #{$payload['order_id']}");
     }
     
     protected function handlePaymentReceived($payload)
     {
-        Log::info("Payment received: {$payload['amount']} for Order #{$payload['order_id']}");
     }
     
     protected function logToFile($payload)
@@ -119,19 +102,16 @@ class ProcessWebhookJob implements ShouldQueue
         
         file_put_contents(
             storage_path('logs/webhook_' . date('Y-m-d') . '.log'),
-            json_encode($logdata) . PHP_EOL,
+            json_encode($logData) . PHP_EOL,
             FILE_APPEND
         );
     }
     
     public function failed(\Throwable $exception)
     {
-        Log::error('Webhook job failed permanently after retries:', [
+        Log::error('Webhook job failed permanently:', [
             'webhook_id' => $this->webhookCall->id,
             'error' => $exception->getMessage()
         ]);
-        
-        // Send admin notification
-        // Mail::to('admin@example.com')->send(new WebhookFailedNotification($this->webhookCall, $exception));
     }
 }

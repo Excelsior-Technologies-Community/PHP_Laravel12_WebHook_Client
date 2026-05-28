@@ -1,8 +1,8 @@
-{{-- resources/views/webhooks/dashboard.blade.php --}}
 <!DOCTYPE html>
-<html>
+<html lang="en">
 
 <head>
+    <meta charset="UTF-8">
     <title>Webhook Dashboard - Enhanced</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -12,6 +12,7 @@
         body {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
             font-family: 'Segoe UI', sans-serif;
+            transition: background 0.3s ease;
         }
         
         .navbar-custom {
@@ -24,7 +25,7 @@
             border-radius: 15px;
             padding: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
-            transition: transform 0.3s ease;
+            transition: transform 0.3s ease, background 0.3s, color 0.3s;
         }
         
         .stat-card:hover {
@@ -55,6 +56,7 @@
             padding: 20px;
             margin-top: 20px;
             box-shadow: 0 10px 40px rgba(0, 0, 0, 0.1);
+            transition: background 0.3s, color 0.3s;
         }
         
         .status-badge {
@@ -90,6 +92,7 @@
             border-radius: 15px;
             padding: 20px;
             margin-bottom: 20px;
+            transition: background 0.3s, color 0.3s;
         }
         
         pre {
@@ -99,6 +102,7 @@
             padding: 10px;
             border-radius: 8px;
             font-size: 0.8rem;
+            transition: background 0.3s, color 0.3s;
         }
         
         .chart-container {
@@ -107,6 +111,7 @@
             padding: 20px;
             margin-bottom: 20px;
             height: 300px;
+            transition: background 0.3s, color 0.3s;
         }
         
         @keyframes pulse {
@@ -125,7 +130,52 @@
             padding: 40px;
             color: #999;
         }
+
+        html.dark body {
+            background: #1a202c !important;
+            color: #e2e8f0;
+        }
+        
+        html.dark .stat-card, 
+        html.dark .table-container, 
+        html.dark .filter-section, 
+        html.dark .chart-container {
+            background: #2d3748;
+            color: #e2e8f0;
+        }
+        
+        html.dark .stat-label, 
+        html.dark .text-muted {
+            color: #a0aec0 !important;
+        }
+        
+        html.dark .table {
+            color: #e2e8f0;
+        }
+        
+        html.dark .table-hover tbody tr:hover {
+            color: #e2e8f0;
+            background-color: rgba(255, 255, 255, 0.05);
+        }
+        
+        html.dark pre {
+            background: #1a202c;
+            color: #a0aec0;
+            border: 1px solid #4a5568;
+        }
+        
+        html.dark .form-control, html.dark .form-select {
+            background-color: #1a202c;
+            color: #e2e8f0;
+            border-color: #4a5568;
+        }
     </style>
+
+    <script>
+        if (localStorage.getItem('darkMode') === 'true') {
+            document.documentElement.classList.add('dark');
+        }
+    </script>
 </head>
 
 <body>
@@ -135,9 +185,12 @@
                 <i class="bi bi-webhook"></i> Webhook Dashboard
             </span>
             <div class="d-flex">
-                <span class="badge bg-info me-2 real-time-badge">
-                    <i class="bi bi-broadcast"></i> Real-time Active
+                <span class="badge bg-info me-2 real-time-badge d-flex align-items-center">
+                    <i class="bi bi-broadcast me-1"></i> Real-time Active
                 </span>
+                <button class="btn btn-outline-light me-2" onclick="toggleDarkMode()">
+                    <i class="bi bi-moon-stars"></i> Dark Mode
+                </button>
                 <button class="btn btn-outline-light" onclick="location.reload()">
                     <i class="bi bi-arrow-clockwise"></i> Refresh
                 </button>
@@ -146,7 +199,6 @@
     </nav>
     
     <div class="container mt-4">
-        <!-- Statistics Cards -->
         <div class="row mb-4">
             <div class="col-md-3">
                 <div class="stat-card">
@@ -197,7 +249,6 @@
             </div>
         </div>
         
-        <!-- Charts Row -->
         <div class="row">
             <div class="col-md-6">
                 <div class="chart-container">
@@ -211,7 +262,6 @@
             </div>
         </div>
         
-        <!-- Filter Section -->
         <div class="filter-section">
             <h5><i class="bi bi-funnel"></i> Filter Webhooks</h5>
             <form method="GET" class="row g-3 mt-2">
@@ -259,7 +309,6 @@
             </form>
         </div>
         
-        <!-- Failed Webhooks Alert -->
         @if(isset($stats['recent_failures']) && $stats['recent_failures']->count() > 0)
         <div class="alert alert-danger alert-dismissible fade show" role="alert">
             <strong><i class="bi bi-exclamation-octagon"></i> Recent Failures:</strong>
@@ -272,7 +321,6 @@
         </div>
         @endif
         
-        <!-- Webhooks Table -->
         <div class="table-container">
             <div class="d-flex justify-content-between align-items-center mb-3">
                 <h5><i class="bi bi-table"></i> Webhook Logs</h5>
@@ -294,6 +342,8 @@
                             <th>Event</th>
                             <th>Payload</th>
                             <th>Status</th>
+                            <th>Time</th>
+                            <th>Memory</th>
                             <th>Response Code</th>
                             <th>Created At</th>
                             <th>Actions</th>
@@ -314,6 +364,8 @@
                                     {{ ucfirst($webhook->status ?? 'Pending') }}
                                 </span>
                             </td>
+                            <td>{{ $webhook->execution_time ?? '-' }}</td>
+                            <td>{{ $webhook->memory_usage ?? '-' }}</td>
                             <td>
                                 @if(isset($webhook->response_code) && $webhook->response_code)
                                     <span class="badge {{ $webhook->response_code == 200 ? 'bg-success' : 'bg-warning' }}">
@@ -325,13 +377,13 @@
                             </td>
                             <td>{{ isset($webhook->created_at) ? $webhook->created_at->format('d M Y, h:i A') : 'N/A' }}</td>
                             <td>
-                                <a href="{{ route('webhooks.show', $webhook->id) }}" class="btn btn-sm btn-info btn-action" title="View Details">
+                                <a href="{{ route('webhooks.show', $webhook->id) }}" class="btn btn-sm btn-info btn-action text-white" title="View Details">
                                     <i class="bi bi-eye"></i>
                                 </a>
                                 @if(isset($webhook->status) && $webhook->status == 'failed' && isset($webhook->retry_count) && $webhook->retry_count < 3)
                                 <form action="{{ route('webhooks.retry', $webhook->id) }}" method="POST" style="display: inline;">
                                     @csrf
-                                    <button type="submit" class="btn btn-sm btn-warning btn-action" title="Retry">
+                                    <button type="submit" class="btn btn-sm btn-warning btn-action text-dark" title="Retry">
                                         <i class="bi bi-arrow-repeat"></i>
                                     </button>
                                 </form>
@@ -340,7 +392,7 @@
                         </tr>
                         @empty
                         <tr>
-                            <td colspan="7" class="text-center text-muted py-5">
+                            <td colspan="9" class="text-center text-muted py-5">
                                 <i class="bi bi-inbox" style="font-size: 3rem;"></i>
                                 <p class="mt-2">No webhook logs found</p>
                             </td>
@@ -358,11 +410,14 @@
     
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Check if events data exists and has values
-        const eventsLabels = {!! json_encode(array_keys($stats['events_by_type'] ?? ['No Data'])) !!};
-        const eventsData = {!! json_encode(array_values($stats['events_by_type'] ?? [1])) !!};
+        function toggleDarkMode() {
+            const isDark = document.documentElement.classList.toggle('dark');
+            localStorage.setItem('darkMode', isDark);
+        }
+
+       const eventsLabels = {!! json_encode(array_keys($stats['events_by_type'] ?? [])) !!};
+const eventsData = {!! json_encode(array_values($stats['events_by_type'] ?? [])) !!};
         
-        // Events Chart
         const eventsCtx = document.getElementById('eventsChart').getContext('2d');
         const eventsChart = new Chart(eventsCtx, {
             type: 'doughnut',
@@ -370,7 +425,8 @@
                 labels: eventsLabels,
                 datasets: [{
                     data: eventsData,
-                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#fa709a']
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb', '#f5576c', '#4facfe', '#43e97b', '#fa709a'],
+                    borderColor: 'transparent'
                 }]
             },
             options: {
@@ -378,17 +434,20 @@
                 maintainAspectRatio: false,
                 plugins: {
                     legend: {
-                        position: 'bottom'
+                        position: 'bottom',
+                        labels: {
+                            color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#666'
+                        }
                     },
                     title: {
                         display: true,
-                        text: 'Webhooks by Event Type'
+                        text: 'Webhooks by Event Type',
+                        color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#666'
                     }
                 }
             }
         });
         
-        // Fetch hourly data via AJAX
         fetch('{{ route("webhooks.stats") }}')
             .then(response => response.json())
             .then(data => {
@@ -410,9 +469,25 @@
                         responsive: true,
                         maintainAspectRatio: false,
                         plugins: {
+                            legend: {
+                                labels: {
+                                    color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#666'
+                                }
+                            },
                             title: {
                                 display: true,
-                                text: 'Webhooks by Hour'
+                                text: 'Webhooks by Hour',
+                                color: document.documentElement.classList.contains('dark') ? '#e2e8f0' : '#666'
+                            }
+                        },
+                        scales: {
+                            x: {
+                                ticks: { color: document.documentElement.classList.contains('dark') ? '#a0aec0' : '#666' },
+                                grid: { color: document.documentElement.classList.contains('dark') ? '#4a5568' : '#e5e7eb' }
+                            },
+                            y: {
+                                ticks: { color: document.documentElement.classList.contains('dark') ? '#a0aec0' : '#666' },
+                                grid: { color: document.documentElement.classList.contains('dark') ? '#4a5568' : '#e5e7eb' }
                             }
                         }
                     }
@@ -420,12 +495,10 @@
             })
             .catch(error => {
                 console.error('Error loading chart data:', error);
-                // Display fallback message
                 document.getElementById('hourlyChart').parentElement.innerHTML = 
                     '<div class="no-data"><i class="bi bi-bar-chart"></i><p>No data available for hourly chart</p></div>';
             });
         
-        // Auto-refresh every 30 seconds (optional)
         setTimeout(() => {
             location.reload();
         }, 30000);

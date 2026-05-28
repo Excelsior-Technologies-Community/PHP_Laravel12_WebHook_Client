@@ -1,8 +1,8 @@
-{{-- resources/views/webhooks/test.blade.php --}}
 <!DOCTYPE html>
 <html>
 
 <head>
+    <meta charset="UTF-8">
     <title>Test Webhook</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdn.jsdelivr.net/npm/bootstrap-icons@1.11.3/font/bootstrap-icons.min.css" rel="stylesheet">
@@ -37,6 +37,12 @@
                     </div>
                     
                     <div class="mb-3">
+                        <label class="form-label">Secret Key (HMAC Signature)</label>
+                        <input type="text" class="form-control" id="secret_key" placeholder="Optional secret key for payload signing">
+                        <small class="text-muted">Used to generate X-Signature header for security testing</small>
+                    </div>
+                    
+                    <div class="mb-3">
                         <label class="form-label">Custom Payload (JSON)</label>
                         <textarea class="form-control" id="custom_payload" rows="8" placeholder='{"key": "value"}'></textarea>
                         <small class="text-muted">Valid JSON format required for custom payload</small>
@@ -57,11 +63,15 @@
             </div>
         </div>
         
-        <div class="card mt-4">
+        <div class="card mt-4 mb-5">
             <div class="card-header bg-success text-white">
-                <h5><i class="bi bi-lightning"></i> Quick Test Buttons</h5>
+                <h5><i class="bi bi-lightning"></i> Quick Test Sandbox</h5>
             </div>
             <div class="card-body">
+                <div class="mb-3">
+                    <label class="form-label">Simulate Latency (Delay in Seconds)</label>
+                    <input type="number" class="form-control" id="simulate_delay" value="0" min="0" max="10" style="max-width: 200px;">
+                </div>
                 <button class="btn btn-outline-primary m-1" onclick="quickTest('order.created')">
                     Test Order Created
                 </button>
@@ -115,34 +125,37 @@
         
         document.getElementById('testForm').addEventListener('submit', async (e) => {
             e.preventDefault();
+            e.stopPropagation();
             
             const webhookUrl = document.getElementById('webhook_url').value;
             const eventType = document.getElementById('event_type').value;
+            const secretKey = document.getElementById('secret_key').value;
             let payload = {};
             
             if (eventType === 'custom') {
                 try {
                     payload = JSON.parse(document.getElementById('custom_payload').value);
-                } catch (e) {
+                } catch (err) {
                     alert('Invalid JSON payload!');
                     return;
                 }
             } else {
-                payload = templates[eventType];
+                payload = templates[eventType] || templates['order.created'];
             }
             
-            // Send webhook
             try {
-                const response = await fetch('/webhooks/test/send', {
+                const response = await fetch('{{ route("webhooks.test.send") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
                     },
                     body: JSON.stringify({
                         webhook_url: webhookUrl,
-                        event: payload.event,
-                        payload: payload
+                        event: payload.event || eventType,
+                        payload: payload,
+                        secret_key: secretKey
                     })
                 });
                 
@@ -154,10 +167,11 @@
                 if (result.success) {
                     alert('Webhook sent successfully!');
                 } else {
-                    alert('Failed to send webhook: ' + result.message);
+                    alert('Webhook failed: ' + (result.message || 'Unknown error'));
                 }
             } catch (error) {
-                alert('Error: ' + error.message);
+                console.error('Fetch Error:', error);
+                alert('Network Error: ' + error.message);
             }
         });
         
@@ -171,27 +185,32 @@
         async function quickTest(eventType) {
             if (!templates[eventType]) return;
             
+            const delay = document.getElementById('simulate_delay').value;
+            
             try {
-                const response = await fetch('/webhooks/test/simulate', {
+                const response = await fetch('{{ route("webhooks.test.simulate") }}', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
+                        'Accept': 'application/json',
                         'X-CSRF-TOKEN': document.querySelector('input[name="_token"]').value
                     },
-                    body: JSON.stringify({ event_type: eventType })
+                    body: JSON.stringify({ 
+                        event_type: eventType,
+                        delay: delay
+                    })
                 });
                 
                 const result = await response.json();
                 
                 if (result.success) {
-                    alert('Test webhook sent successfully!\nCheck the dashboard for new entry.');
-                    setTimeout(() => {
-                        window.location.href = '/webhooks';
-                    }, 1000);
+                    alert('Test webhook simulated successfully!');
+                    window.location.href = '{{ route("webhooks.dashboard") }}';
                 } else {
-                    alert('Failed: ' + result.error);
+                    alert('Simulation Failed: ' + (result.error || 'Unknown error'));
                 }
             } catch (error) {
+                console.error('Simulation Error:', error);
                 alert('Error: ' + error.message);
             }
         }
