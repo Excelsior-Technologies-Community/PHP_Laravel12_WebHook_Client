@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/WebhookTestController.php
 
 namespace App\Http\Controllers;
 
@@ -37,14 +36,23 @@ class WebhookTestController extends Controller
             'webhook_url' => 'required|url',
             'event' => 'required|string',
             'payload' => 'required|array',
+            'secret_key' => 'nullable|string'
         ]);
         
+        $payload = [
+            'event' => $validated['event'],
+            'timestamp' => now()->toISOString(),
+            'data' => $validated['payload'],
+        ];
+
+        $headers = ['X-Timestamp' => $payload['timestamp']];
+        
+        if (!empty($validated['secret_key'])) {
+            $headers['X-Signature'] = hash_hmac('sha256', json_encode($payload), $validated['secret_key']);
+        }
+        
         try {
-            $response = Http::post($validated['webhook_url'], [
-                'event' => $validated['event'],
-                'timestamp' => now()->toISOString(),
-                'data' => $validated['payload'],
-            ]);
+            $response = Http::withHeaders($headers)->post($validated['webhook_url'], $payload);
             
             return response()->json([
                 'success' => $response->successful(),
@@ -65,49 +73,45 @@ class WebhookTestController extends Controller
     {
         $eventType = $request->input('event_type', 'order.created');
         $customData = $request->input('custom_data', []);
+        $delay = $request->input('delay', 0);
         
         $testPayloads = [
             'order.created' => [
                 'event' => 'order.created',
                 'order_id' => rand(1000, 9999),
                 'amount' => rand(100, 10000),
-                'customer' => [
-                    'name' => 'Test Customer',
-                    'email' => 'test@example.com'
-                ],
-                'items' => [
-                    ['id' => 1, 'name' => 'Product 1', 'quantity' => 2, 'price' => 50],
-                    ['id' => 2, 'name' => 'Product 2', 'quantity' => 1, 'price' => 150],
-                ]
+                'customer' => ['name' => 'Test Customer', 'email' => 'test@example.com']
             ],
             'order.updated' => [
                 'event' => 'order.updated',
                 'order_id' => rand(1000, 9999),
-                'status' => 'shipped',
-                'tracking_number' => 'TRK' . rand(100000, 999999)
+                'status' => 'shipped'
             ],
             'payment.received' => [
                 'event' => 'payment.received',
                 'order_id' => rand(1000, 9999),
                 'amount' => rand(100, 10000),
-                'payment_method' => 'credit_card',
                 'transaction_id' => 'TXN' . rand(100000, 999999)
             ]
         ];
         
         $payload = array_merge($testPayloads[$eventType] ?? $testPayloads['order.created'], $customData);
         
-        // Send to local webhook endpoint
         $webhookUrl = url('/webhook-client');
         
         try {
+            if ($delay > 0) {
+                sleep((int)$delay);
+            }
+            
             $response = Http::post($webhookUrl, $payload);
             
             return response()->json([
                 'success' => $response->successful(),
                 'payload_sent' => $payload,
                 'response' => $response->json(),
-                'status_code' => $response->status()
+                'status_code' => $response->status(),
+                'latency' => $response->transferStats ? $response->transferStats->getTransferTime() : 'N/A'
             ]);
         } catch (\Exception $e) {
             return response()->json([

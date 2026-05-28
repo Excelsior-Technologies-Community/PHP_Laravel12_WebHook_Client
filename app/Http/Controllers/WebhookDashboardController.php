@@ -1,5 +1,4 @@
 <?php
-// app/Http/Controllers/WebhookDashboardController.php
 
 namespace App\Http\Controllers;
 
@@ -7,6 +6,7 @@ use App\Models\WebhookCall;
 use App\Models\WebhookFailure;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Http;
 
 class WebhookDashboardController extends Controller
 {
@@ -14,7 +14,6 @@ class WebhookDashboardController extends Controller
     {
         $query = WebhookCall::query();
 
-        // Apply filters
         if ($request->filled('event')) {
             $query->where('name', 'like', '%' . $request->event . '%');
         }
@@ -41,7 +40,6 @@ class WebhookDashboardController extends Controller
 
         $webhooks = $query->latest()->paginate(15);
 
-        // Statistics with proper error handling
         $stats = [
             'total' => WebhookCall::count(),
             'today' => WebhookCall::whereDate('created_at', today())->count(),
@@ -74,13 +72,32 @@ class WebhookDashboardController extends Controller
             $webhook->incrementRetryCount();
             $webhook->update(['status' => 'pending']);
             
-            // Dispatch job again
             dispatch(new \App\Jobs\ProcessWebhookJob($webhook));
             
             return redirect()->back()->with('success', 'Webhook retry scheduled successfully!');
         }
         
         return redirect()->back()->with('error', 'Maximum retry attempts reached!');
+    }
+
+    public function getTest()
+    {
+        return view('webhooks.test');
+    }
+
+    public function sendTest(Request $request)
+    {
+        $request->validate([
+            'url' => 'required|url',
+            'payload' => 'required|json'
+        ]);
+
+        try {
+            $response = Http::post($request->url, json_decode($request->payload, true));
+            return back()->with('success', 'Test Request Sent! Status: ' . $response->status());
+        } catch (\Exception $e) {
+            return back()->with('error', 'Test Failed: ' . $e->getMessage());
+        }
     }
 
     public function export(Request $request)
@@ -100,7 +117,6 @@ class WebhookDashboardController extends Controller
         $filename = 'webhooks_export_' . date('Y-m-d_H-i-s') . '.csv';
         $handle = fopen('php://temp', 'w');
         
-        // Add CSV headers
         fputcsv($handle, ['ID', 'Event', 'Payload', 'Status', 'Created At']);
         
         foreach ($webhooks as $webhook) {
@@ -150,7 +166,6 @@ class WebhookDashboardController extends Controller
             ->pluck('total', 'name')
             ->toArray();
         
-        // Return empty array if no events found
         return !empty($events) ? $events : ['No events' => 0];
     }
 
@@ -167,7 +182,7 @@ class WebhookDashboardController extends Controller
     {
         $total = WebhookCall::count();
         if ($total === 0) {
-            return 100; // Return 100% if no webhooks yet
+            return 100;
         }
         
         $successful = WebhookCall::where('status', 'processed')->count();
